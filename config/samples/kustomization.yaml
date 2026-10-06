@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- fleetguard_v1alpha1_ttlcleanup.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

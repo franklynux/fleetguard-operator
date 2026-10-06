@@ -1,0 +1,32 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - fleetguard.fleetguard.io
+  resources:
+  - ttlcleanups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - fleetguard.fleetguard.io
+  resources:
+  - ttlcleanups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - fleetguard.fleetguard.io
+  resources:
+  - ttlcleanups/status
+  verbs:
+  - get
+  - patch
+  - update
