@@ -14,10 +14,29 @@ spec:
     singular: ttlcleanup
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.targetRef.kind
+      name: Kind
+      type: string
+    - jsonPath: .spec.ttl
+      name: TTL
+      type: string
+    - jsonPath: .spec.dryRun
+      name: DryRun
+      type: boolean
+    - jsonPath: .status.objectsMatched
+      name: Matched
+      type: integer
+    - jsonPath: .status.objectsDeleted
+      name: Deleted
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: TTLCleanup is the Schema for the ttlcleanups API
+        description: TTLCleanup is the Schema for the ttlcleanups API.
         properties:
           apiVersion:
             description: |-
@@ -37,27 +56,102 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of TTLCleanup
+            description: TTLCleanupSpec defines the desired state of TTLCleanup.
             properties:
-              foo:
-                description: foo is an example field of TTLCleanup. Edit ttlcleanup_types.go
-                  to remove/update
+              dryRun:
+                default: false
+                description: |-
+                  DryRun, when true, makes the controller record and emit Events for
+                  expired matches without deleting them. Useful for validating a
+                  TargetRef/selector before trusting it to delete things.
+                type: boolean
+              targetRef:
+                description: TargetRef identifies which resources this TTLCleanup
+                  manages.
+                properties:
+                  apiVersion:
+                    description: APIVersion of the target resource, e.g. "batch/v1"
+                      or "v1" for core resources.
+                    type: string
+                  kind:
+                    description: Kind of the target resource, e.g. "Job", "Pod", or
+                      a custom resource Kind.
+                    type: string
+                  labelSelector:
+                    description: |-
+                      LabelSelector further narrows which objects of the given Kind are
+                      considered. Nil/empty selects all objects of that Kind (within Namespace,
+                      if set).
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  namespace:
+                    description: |-
+                      Namespace to restrict the search to. Empty means cluster-wide
+                      (only meaningful for namespace-scoped resources; a cluster-scoped
+                      Kind ignores this field).
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                type: object
+              ttl:
+                description: |-
+                  TTL is how long a matched object may live, measured from its
+                  creationTimestamp, before it is considered expired.
                 type: string
+            required:
+            - targetRef
+            - ttl
             type: object
           status:
-            description: status defines the observed state of TTLCleanup
+            description: TTLCleanupStatus defines the observed state of TTLCleanup.
             properties:
               conditions:
                 description: |-
-                  conditions represent the current state of the TTLCleanup resource.
-                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
-
-                  Standard condition types include:
-                  - "Available": the resource is fully functional
-                  - "Progressing": the resource is being created or updated
-                  - "Degraded": the resource failed to reach or maintain its desired state
-
-                  The status of each condition is one of True, False, or Unknown.
+                  Conditions represent the latest available observations of the
+                  TTLCleanup's state.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -116,9 +210,24 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              lastCleanupTime:
+                description: LastCleanupTime is when the controller last completed
+                  a reconcile pass.
+                format: date-time
+                type: string
+              objectsDeleted:
+                description: |-
+                  ObjectsDeleted is the count of expired objects deleted in the last
+                  reconcile pass. Stays 0 while DryRun is true.
+                format: int32
+                type: integer
+              objectsMatched:
+                description: |-
+                  ObjectsMatched is the count of objects matching TargetRef as of the
+                  last reconcile (expired or not).
+                format: int32
+                type: integer
             type: object
-        required:
-        - spec
         type: object
     served: true
     storage: true

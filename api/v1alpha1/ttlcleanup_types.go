@@ -1,17 +1,5 @@
 /*
 Copyright 2026.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
 */
 
 package v1alpha1
@@ -21,76 +9,107 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// TargetReference identifies the kind of resource a TTLCleanup should watch
+// for expiry, optionally narrowed to a namespace and/or a label selector.
+type TargetReference struct {
+	// APIVersion of the target resource, e.g. "batch/v1" or "v1" for core resources.
+	// +kubebuilder:validation:Required
+	APIVersion string `json:"apiVersion"`
 
-// TTLCleanupSpec defines the desired state of TTLCleanup
-type TTLCleanupSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
+	// Kind of the target resource, e.g. "Job", "Pod", or a custom resource Kind.
+	// +kubebuilder:validation:Required
+	Kind string `json:"kind"`
 
-	// foo is an example field of TTLCleanup. Edit ttlcleanup_types.go to remove/update
+	// Namespace to restrict the search to. Empty means cluster-wide
+	// (only meaningful for namespace-scoped resources; a cluster-scoped
+	// Kind ignores this field).
 	// +optional
-	Foo *string `json:"foo,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+
+	// LabelSelector further narrows which objects of the given Kind are
+	// considered. Nil/empty selects all objects of that Kind (within Namespace,
+	// if set).
+	// +optional
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// TTLCleanupSpec defines the desired state of TTLCleanup.
+type TTLCleanupSpec struct {
+	// TargetRef identifies which resources this TTLCleanup manages.
+	// +kubebuilder:validation:Required
+	TargetRef TargetReference `json:"targetRef"`
+
+	// TTL is how long a matched object may live, measured from its
+	// creationTimestamp, before it is considered expired.
+	// +kubebuilder:validation:Required
+	TTL metav1.Duration `json:"ttl"`
+
+	// DryRun, when true, makes the controller record and emit Events for
+	// expired matches without deleting them. Useful for validating a
+	// TargetRef/selector before trusting it to delete things.
+	// +optional
+	// +kubebuilder:default=false
+	DryRun bool `json:"dryRun,omitempty"`
 }
 
 // TTLCleanupStatus defines the observed state of TTLCleanup.
 type TTLCleanupStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// LastCleanupTime is when the controller last completed a reconcile pass.
+	// +optional
+	LastCleanupTime *metav1.Time `json:"lastCleanupTime,omitempty"`
 
-	// For Kubernetes API conventions, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+	// ObjectsMatched is the count of objects matching TargetRef as of the
+	// last reconcile (expired or not).
+	// +optional
+	ObjectsMatched int32 `json:"objectsMatched,omitempty"`
 
-	// conditions represent the current state of the TTLCleanup resource.
-	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
-	//
-	// Standard condition types include:
-	// - "Available": the resource is fully functional
-	// - "Progressing": the resource is being created or updated
-	// - "Degraded": the resource failed to reach or maintain its desired state
-	//
-	// The status of each condition is one of True, False, or Unknown.
+	// ObjectsDeleted is the count of expired objects deleted in the last
+	// reconcile pass. Stays 0 while DryRun is true.
+	// +optional
+	ObjectsDeleted int32 `json:"objectsDeleted,omitempty"`
+
+	// Conditions represent the latest available observations of the
+	// TTLCleanup's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Kind",type=string,JSONPath=`.spec.targetRef.kind`
+// +kubebuilder:printcolumn:name="TTL",type=string,JSONPath=`.spec.ttl`
+// +kubebuilder:printcolumn:name="DryRun",type=boolean,JSONPath=`.spec.dryRun`
+// +kubebuilder:printcolumn:name="Matched",type=integer,JSONPath=`.status.objectsMatched`
+// +kubebuilder:printcolumn:name="Deleted",type=integer,JSONPath=`.status.objectsDeleted`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// TTLCleanup is the Schema for the ttlcleanups API
+// TTLCleanup is the Schema for the ttlcleanups API.
 type TTLCleanup struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// metadata is a standard object metadata
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitzero"`
-
-	// spec defines the desired state of TTLCleanup
-	// +required
-	Spec TTLCleanupSpec `json:"spec"`
-
-	// status defines the observed state of TTLCleanup
-	// +optional
-	Status TTLCleanupStatus `json:"status,omitzero"`
+	Spec   TTLCleanupSpec   `json:"spec,omitempty"`
+	Status TTLCleanupStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// TTLCleanupList contains a list of TTLCleanup
+// TTLCleanupList contains a list of TTLCleanup.
 type TTLCleanupList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitzero"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []TTLCleanup `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(func(s *runtime.Scheme) error {
-		s.AddKnownTypes(SchemeGroupVersion, &TTLCleanup{}, &TTLCleanupList{})
-		return nil
-	})
+	SchemeBuilder.Register(addKnownTypes)
+}
+
+func addKnownTypes(scheme *runtime.Scheme) error {
+	scheme.AddKnownTypes(SchemeGroupVersion, &TTLCleanup{}, &TTLCleanupList{})
+	return nil
 }
