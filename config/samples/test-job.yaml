@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ttl-test-job
+  namespace: default
+  labels:
+    ttl-cleanup: "true"
+spec:
+  ttlSecondsAfterFinished: null 
+  template:
+    spec:
+      containers:
+        - name: sleep
+          image: busybox:1.36
+          command: ["sh", "-c", "echo done; sleep 1"]
+      restartPolicy: Never
+  backoffLimit: 0

@@ -1,9 +1,15 @@
 apiVersion: fleetguard.fleetguard.io/v1alpha1
 kind: TTLCleanup
 metadata:
-  labels:
-    app.kubernetes.io/name: fleetguard-operator
-    app.kubernetes.io/managed-by: kustomize
-  name: ttlcleanup-sample
+  name: ttlcleanup-sample-jobs
+  namespace: default
 spec:
-  # TODO(user): Add fields here
+  targetRef:
+    apiVersion: batch/v1
+    kind: Job
+    namespace: default
+    labelSelector:
+      matchLabels:
+        ttl-cleanup: "true"
+  ttl: 30s
+  dryRun: true
