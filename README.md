@@ -205,8 +205,8 @@ The controller's RBAC is intentionally broad (`groups=*,resources=*` for get/lis
 
 Issues and pull requests are welcome. Run `make test` before submitting a PR — CI runs the same suite on every push and PR to `main`.
 
-<!-- ![passing GitHub Actions run](imgs/ci-passing.png) -->
-<!-- Shot: a passing GitHub Actions run under the repo's Actions tab -->
+![passing GitHub Actions run](imgs/ci-passing.png)
+Shot: a passing GitHub Actions run under the repo's Actions tab
 
 **NOTE:** Run `make help` for more information on all potential `make` targets
 
