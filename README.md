@@ -1,4 +1,4 @@
-# fleetguard-operator
+# FleetGuard — Generic TTL Cleanup for Kubernetes
 
 [![CI](https://github.com/franklynux/fleetguard-operator/actions/workflows/test.yml/badge.svg)](https://github.com/franklynux/fleetguard-operator/actions/workflows/test.yml)
 
